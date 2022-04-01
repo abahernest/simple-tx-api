@@ -8,7 +8,17 @@ export async function Withdrawal (data) {
       //verify tx pin
       const user = await db("users")
         .where({ id: data.user })
-        .select("transaction_pin");
+        .select("transaction_pin", "transaction_pin_set");
+
+      //Check that transaction pin is set
+      if (!user[0].transaction_pin_set) {
+        return {
+          code: 400,
+          status: "failed",
+          error: true,
+          message: "please set transaction pin",
+        };
+      }
 
       const isValidPin = await verifyHash(
         data.transaction_pin,
@@ -69,7 +79,16 @@ export async function Transfer (data) {
       //verify tx pin
       const user = await db("users")
         .where({ id: data.user })
-        .select("transaction_pin");
+        .select("transaction_pin", "transaction_pin_set");
+      
+      if (!user[0].transaction_pin_set) {
+        return {
+          code: 400,
+          status: "failed",
+          error: true,
+          message: "please set transaction pin",
+        };
+      }
 
       const isValidPin = await verifyHash(
         data.transaction_pin,
