@@ -63,7 +63,6 @@ router.post("/topup", isAuth,validateTopup, async (req, res, next) => {
 router.post("/withdraw", isAuth, validateWithdrawal, async (req, res, next) => {
     try {
         req.body.user=req.currentUser.id
-        console.log(req.body)
         const transaction = await Withdrawal (req.body);
 
         return res.status(transaction.code).json(transaction);

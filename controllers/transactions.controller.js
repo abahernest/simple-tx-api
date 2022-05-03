@@ -79,7 +79,7 @@ export async function Transfer (data) {
       //verify tx pin
       const user = await db("users")
         .where({ id: data.user })
-        .select("transaction_pin", "transaction_pin_set");
+        .select("*");
       
       if (!user[0].transaction_pin_set) {
         return {
@@ -118,7 +118,7 @@ export async function Transfer (data) {
       //verify receiver email
       const receiver = await db("users")
         .where({ email: data.email })
-        .select("id");
+        .select("id","email","fullname");
 
       if (receiver.length < 1) {
         return {
@@ -129,26 +129,39 @@ export async function Transfer (data) {
         };
       }
 
-      let transaction_obj = {
-        type: "transfer",
-        user_id: data.user,
-        receiver_id: receiver[0].id,
-        receiver_email: receiver[0].email,
-        amount: -data.amount,
-      };
+      const transaction_array = [
+        //debit transaction for sender
+        {
+          type: "transfer",
+          user_id: data.user,
+          receiver_id: receiver[0].id,
+          receiver_email: receiver[0].email,
+          amount: -data.amount,
+        },
+        //credit transaction for receiver
+        {
+          type: "topup",
+          user_id: receiver[0].id,
+          receiver_id: user[0].id,
+          receiver_email: user[0].email,
+          amount: data.amount,
+        },
+      ];
 
-      //create withdrawal transactions
-      let transaction = await db("transactions").insert(transaction_obj);
-      transaction = await db("transactions")
-        .where({ id: transaction[0] })
-        .select("*");
+      // let transaction = await db("transactions").insert(transaction_array);
 
+      const chunkSize = 30;
+      const transaction = await db.batchInsert('transactions', transaction_array, chunkSize)
+      console.log(transaction)
       return {
         code: 200,
         status: "success",
         error: false,
         message: "Transfer Successful",
-        data: transaction,
+        data: {
+          sender:{id:user[0].id,email:user[0].email,fullname:user[0].fullname},
+          receiver:receiver[0]
+        }
       };
     } catch (e) {
       return {
